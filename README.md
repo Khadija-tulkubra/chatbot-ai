@@ -1,38 +1,72 @@
-# 🤖 Chatbot AI (Next.js + OpenRouter)
+🤖 ChatBot AI (Next.js + OpenRouter + Streaming)
 
-A simple **AI Chatbot** built with **Next.js 13 (App Router)** and **OpenRouter API**.  
-This project supports **streaming chat responses** (real-time typing effect).
+An advanced AI chatbot built with Next.js 13, React Hooks, and OpenRouter API.
+Supports real-time streaming responses, chat history (sidebar), and chat download feature — similar to ChatGPT web UI.
 
----
+🚀 Features
 
-## 🚀 Features
-- ⚡ Real-time **streaming responses**  
-- 🎨 Beautiful UI with **TailwindCSS**  
-- 🔒 Secure API integration with `.env.local`
+⚡ Streaming Responses (like ChatGPT typing effect)
 
----
+💬 Chat History Sidebar (stores multiple conversations during session)
 
-## 📂 Project Structure
-chatbot-ai/
-│── app/
-│ ├── api/
-│ │ ├── chat-stream/route.ts # Streaming chat API route
-│ ├── page.js # Frontend (UI)
-│── public/ # Static assets
-│── .gitignore
-│── package.json
-│── README.md
----
-🖥️ Deployment
-Deployed on vercel
+⬇️ Download Chat History as .txt file
+
+🎨 Modern UI/UX with Tailwind CSS
+
+🌐 Deployable on Vercel (auto builds on every GitHub push)
+
+🔑 Secure with environment variables
+
+📂 Project Structure
+/app
+ ├── api
+ │    └── chat-stream/route.ts   # API route (handles OpenRouter streaming)
+ ├── page.tsx                    # Main UI (Chatbot interface)
+ └── globals.css                 # TailwindCSS styles
+
+🛠️ Setup & Installation
+1️⃣ Clone the Repository
+git clone https://github.com/YOUR_USERNAME/chatbot-ai.git
+cd chatbot-ai
+
+2️⃣ Install Dependencies
+npm install
+# or
+yarn install
+
+3️⃣ Environment Variables
+
+Create a file named .env.local in the root folder and add:
+
+OPENAI_API_KEY=your_openrouter_api_key_here
+
+
+⚠️ Never commit or push .env.local to GitHub. It should remain private!
+
+4️⃣ Run Development Server
+npm run dev
+
+
+Now visit 👉 http://localhost:3000
+
+
+Push your project to GitHub.
+
+Go to Vercel
+, create a New Project, and connect your GitHub repo.
+
+Add OPENAI_API_KEY in Vercel Project → Settings → Environment Variables.
+
+Vercel auto-deploys whenever you push updates to GitHub.
+
+
+
+📸 Screenshot
+<img width="1351" height="623" alt="image" src="https://github.com/user-attachments/assets/5f054490-e592-4816-a1b4-5500832eb39a" />
+
+📦 Deployment (Vercel)
 Link: https://chatbot-ai-two-tau.vercel.app/
 
----
-📸 Screenshot
-<img width="1365" height="619" alt="image" src="https://github.com/user-attachments/assets/4ae89d5d-30d8-4d5b-a8ca-01296b7ce1e0" />
+📜 License
 
-
-
-
-
-Made with ❤️ by Khadija Tul Kubra
+MIT License © 2025
