@@ -1,23 +1,23 @@
-🤖 ChatBot AI (Next.js + OpenRouter + Streaming)
+# 🤖 ChatBot AI (Next.js + OpenRouter + Streaming)
 
-An advanced AI chatbot built with Next.js 13, React Hooks, and OpenRouter API.
-Supports real-time streaming responses, chat history (sidebar), and chat download feature — similar to ChatGPT web UI.
+An advanced **AI Chatbot** built with **Next.js 13 (App Router)**, **React Hooks**, and **OpenRouter API**.  
+Supports **real-time streaming responses**, **chat history (sidebar)**, and **chat download feature** — inspired by the ChatGPT web UI.
 
-🚀 Features
+---
 
-⚡ Streaming Responses (like ChatGPT typing effect)
+## 🚀 Features
 
-💬 Chat History Sidebar (stores multiple conversations during session)
+- ⚡ **Streaming Responses** (typing effect in real-time)  
+- 💬 **Chat History Sidebar** (stores multiple conversations during session)  
+- ⬇️ **Download Chat History** as `.txt` file  
+- 🎨 **Modern UI/UX** built with Tailwind CSS  
+- 🌐 **One-click deployment on Vercel**  
+- 🔑 **Secure API keys** using `.env.local`  
 
-⬇️ Download Chat History as .txt file
+---
 
-🎨 Modern UI/UX with Tailwind CSS
+## 📂 Project Structure
 
-🌐 Deployable on Vercel (auto builds on every GitHub push)
-
-🔑 Secure with environment variables
-
-📂 Project Structure
 /app
  ├── api
  │    └── chat-stream/route.ts   # API route (handles OpenRouter streaming)
