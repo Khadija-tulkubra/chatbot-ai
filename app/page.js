@@ -1,103 +1,139 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [message, setMessage] = useState("");
+  const [response, setResponse] = useState("");
+  const [streamResponse, setStreamResponse] = useState("");
+  const [loadingNormal, setLoadingNormal] = useState(false);
+  const [loadingStream, setLoadingStream] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // 🔹 Normal Chat
+  // const handleChat = async () => {
+  //   setLoadingNormal(true);
+  //   setResponse("");
+
+  //   try {
+  //     const res = await fetch("/api/chat", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ message }),
+  //     });
+
+  //     const data = await res.json();
+  //     setResponse(data.response);
+  //   } catch (error) {
+  //     setResponse("Error: " + error.message);
+  //   }
+
+  //   setLoadingNormal(false);
+  // };
+
+  // 🔹 Stream Chat
+  const handleStreamChat = async () => {
+    setLoadingStream(true);
+    setStreamResponse("");
+
+    try {
+      const res = await fetch("/api/chat-stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      const reader = res.body.getReader();
+
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = JSON.parse(line.slice(6));
+            if (data.content) {
+              setStreamResponse((prev) => prev + data.content);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      setStreamResponse("Error: " + error.message);
+    }
+
+    setLoadingStream(false);
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-200 via-pink-100 to-yellow-100 font-sans p-6">
+      <div className="w-full max-w-2xl bg-white shadow-2xl rounded-3xl p-8 flex flex-col gap-6">
+        {/* Header */}
+        <h1 className="text-3xl font-extrabold text-center text-purple-700 drop-shadow-lg">
+          🤖 ChatBot AI
+        </h1>
+
+        {/* Input Box */}
+        <div className="flex items-center gap-4">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type your message..."
+            rows={2}
+            className="flex-1 p-4 border-2 border-purple-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-400 transition-all duration-300 shadow-inner bg-purple-50"
+          />
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleStreamChat}
+              disabled={loadingStream}
+              className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-2xl hover:bg-purple-700 disabled:bg-gray-400 transition-colors duration-300 shadow-lg"
+            >
+              {loadingStream? "Sending..." : "Send"}
+            </button>
+
+            {/* <button
+              onClick={handleStreamChat}
+              disabled={loadingStream}
+              className="px-6 py-3 bg-pink-600 text-white font-semibold rounded-2xl hover:bg-pink-700 disabled:bg-gray-400 transition-colors duration-300 shadow-lg"
+            >
+              {loadingStream ? "Streaming..." : "Chat"}
+            </button> */}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Normal Chat Area
+        <div className="min-h-[200px] max-h-[300px] overflow-y-auto border-2 border-purple-200 rounded-2xl p-6 bg-purple-50 shadow-inner">
+          {loadingNormal ? (
+            <p className="text-purple-500 italic animate-pulse">
+              🤔 Thinking...
+            </p>
+          ) : response ? (
+            <p className="text-purple-800 font-medium">{response}</p>
+          ) : (
+            <p className="text-purple-400 italic">No response yet...</p>
+          )}
+        </div> */}
+
+        {/* Stream Chat Area */}
+        <div className="min-h-[200px] max-h-[300px] overflow-y-auto border-2 border-pink-200 rounded-2xl p-6 bg-pink-50 shadow-inner">
+          {loadingStream ? (
+            <p className="text-pink-500 italic animate-pulse">
+              🔄 Sending...
+            </p>
+          ) : streamResponse ? (
+            <p className="text-pink-800 font-medium">{streamResponse}</p>
+          ) : (
+            <p className="text-pink-400 italic">No response yet...</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
