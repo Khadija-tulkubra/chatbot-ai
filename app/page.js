@@ -2,51 +2,75 @@
 import { useState } from "react";
 
 export default function Home() {
+
+  const [chats, setChats] = useState([
+    { id: Date.now(), title: "New Chat", messages: [] },
+  ]);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+
   const [message, setMessage] = useState("");
-  const [response, setResponse] = useState("");
-  const [streamResponse, setStreamResponse] = useState("");
-  const [loadingNormal, setLoadingNormal] = useState(false);
-  const [loadingStream, setLoadingStream] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  // 🔹 Normal Chat
-  // const handleChat = async () => {
-  //   setLoadingNormal(true);
-  //   setResponse("");
+  const activeChat = chats[activeIdx];
+  const messages = activeChat?.messages ?? [];
 
-  //   try {
-  //     const res = await fetch("/api/chat", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({ message }),
-  //     });
+  const handleNewChat = () => {
+    const newChat = {
+      id: Date.now(),
+      title: "New Chat",
+      messages: [],
+    };
+    setChats((prev) => [newChat, ...prev]);
+    setActiveIdx(0);
+  };
 
-  //     const data = await res.json();
-  //     setResponse(data.response);
-  //   } catch (error) {
-  //     setResponse("Error: " + error.message);
-  //   }
+ 
+  const maybeRenameActive = (firstUserText) => {
+    if (!firstUserText) return;
+    setChats((prev) =>
+      prev.map((c, i) =>
+        i === activeIdx && (c.title === "New Chat" || !c.title)
+          ? { ...c, title: firstUserText.slice(0, 30) + (firstUserText.length > 30 ? "..." : "") }
+          : c
+      )
+    );
+  };
 
-  //   setLoadingNormal(false);
-  // };
+  const setActiveMessages = (updater) => {
+    setChats((prev) =>
+      prev.map((c, i) =>
+        i === activeIdx ? { ...c, messages: typeof updater === "function" ? updater(c.messages) : updater } : c
+      )
+    );
+  };
 
-  // 🔹 Stream Chat
   const handleStreamChat = async () => {
-    setLoadingStream(true);
-    setStreamResponse("");
+    const userText = message.trim();
+    if (!userText || sending) return;
+
+    setSending(true);
+    setMessage("");
+
+    const baseMessages = [...messages, { role: "user", content: userText }];
+    setActiveMessages(baseMessages);
+    maybeRenameActive(userText);
+
+    let assistantAdded = false;
+    let assistantReply = "";
 
     try {
       const res = await fetch("/api/chat-stream", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: baseMessages }), 
       });
 
-      const reader = res.body.getReader();
+      if (!res.ok || !res.body) {
+        throw new Error("No response body from server.");
+      }
 
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
 
       while (true) {
@@ -57,83 +81,152 @@ export default function Home() {
         const lines = chunk.split("\n");
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = JSON.parse(line.slice(6));
-            if (data.content) {
-              setStreamResponse((prev) => prev + data.content);
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6);
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const piece = data.content || "";
+            if (!piece) continue;
+
+            assistantReply += piece;
+
+       
+            if (!assistantAdded) {
+              assistantAdded = true;
+              setActiveMessages((prev) => [...prev, { role: "assistant", content: "" }]);
             }
+
+            setActiveMessages((prev) => {
+              if (prev.length === 0) return prev;
+              const last = prev[prev.length - 1];
+              if (last.role !== "assistant") return prev; // safety
+              const updatedLast = { ...last, content: assistantReply };
+              return [...prev.slice(0, -1), updatedLast];
+            });
+          } catch {
+         
           }
         }
       }
-    } catch (error) {
-      setStreamResponse("Error: " + error.message);
+    } catch (err) {
+      const fallback = `Error: ${err?.message || "stream failed"}`;
+      setActiveMessages((prev) => [...prev, { role: "assistant", content: fallback }]);
     }
 
-    setLoadingStream(false);
+    setSending(false);
+  };
+
+  const handleDownload = () => {
+    const chat = chats[activeIdx];
+    if (!chat) return;
+
+    const text = chat.messages
+      .map((m) => `${m.role === "user" ? "You" : "Assistant"}: ${m.content}`)
+      .join("\n\n");
+
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (chat.title || "chat") + ".txt";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-200 via-pink-100 to-yellow-100 font-sans p-6">
-      <div className="w-full max-w-2xl bg-white shadow-2xl rounded-3xl p-8 flex flex-col gap-6">
-        {/* Header */}
-        <h1 className="text-3xl font-extrabold text-center text-purple-700 drop-shadow-lg">
-          🤖 ChatBot AI
-        </h1>
+    <div className="h-screen w-screen grid grid-cols-[260px_1fr] bg-gray-100">
+ 
+      <aside className="h-full bg-gray-900 text-white flex flex-col">
+        <div className="p-4 flex items-center justify-between border-b border-gray-800">
+          <h2 className="text-lg font-bold">💬 My Chats</h2>
+          <button
+            onClick={handleNewChat}
+            className="px-2 py-1 bg-purple-600 rounded-lg text-sm hover:bg-purple-500"
+          >
+            + New
+          </button>
+        </div>
 
-        {/* Input Box */}
-        <div className="flex items-center gap-4">
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message..."
-            rows={2}
-            className="flex-1 p-4 border-2 border-purple-300 rounded-2xl focus:outline-none focus:ring-4 focus:ring-purple-400 transition-all duration-300 shadow-inner bg-purple-50"
-          />
-          <div className="flex flex-col gap-2">
+        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+          {chats.map((c, i) => (
+            <button
+              key={c.id}
+              onClick={() => setActiveIdx(i)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                i === activeIdx ? "bg-purple-600" : "hover:bg-gray-800"
+              }`}
+              title={c.title}
+            >
+              {c.title || "Untitled"}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-3 border-t border-gray-800">
+          <button
+            onClick={handleDownload}
+            className="w-full px-3 py-2 bg-green-600 rounded-lg text-sm hover:bg-green-500"
+          >
+            ⬇️ Download Chat
+          </button>
+        </div>
+      </aside>
+
+      {/* MAIN CHAT AREA */}
+      <main className="h-full flex flex-col">
+        {/* Header */}
+        <header className="px-6 py-4 bg-white border-b">
+          <h1 className="text-2xl font-bold text-gray-800">🤖 ChatBot AI</h1>
+          <p className="text-sm text-gray-500">Next.js • OpenRouter • Streaming</p>
+        </header>
+
+        {/* Messages */}
+        <section className="flex-1 overflow-y-auto p-6 space-y-3 bg-gray-50">
+          {messages.length === 0 ? (
+            <p className="text-gray-400 italic">Start a conversation…</p>
+          ) : (
+            messages.map((m, i) => (
+              <div
+                key={i}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[75%] px-4 py-2 rounded-2xl shadow-sm whitespace-pre-wrap break-words ${
+                    m.role === "user"
+                      ? "bg-purple-600 text-white rounded-br-sm"
+                      : "bg-white border rounded-bl-sm"
+                  }`}
+                >
+                  {m.content}
+                </div>
+              </div>
+            ))
+          )}
+        </section>
+
+        {/* Input */}
+        <footer className="p-4 bg-white border-t">
+          <div className="flex gap-2">
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={2}
+              placeholder="Type your message…"
+              className="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 bg-gray-50"
+            />
             <button
               onClick={handleStreamChat}
-              disabled={loadingStream}
-              className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-2xl hover:bg-purple-700 disabled:bg-gray-400 transition-colors duration-300 shadow-lg"
+              disabled={sending || !message.trim()}
+              className="px-5 py-3 bg-purple-600 text-white rounded-xl disabled:bg-gray-400 hover:bg-purple-700"
             >
-              {loadingStream? "Sending..." : "Send"}
+              {sending ? "Sending…" : "Send"}
             </button>
-
-            {/* <button
-              onClick={handleStreamChat}
-              disabled={loadingStream}
-              className="px-6 py-3 bg-pink-600 text-white font-semibold rounded-2xl hover:bg-pink-700 disabled:bg-gray-400 transition-colors duration-300 shadow-lg"
-            >
-              {loadingStream ? "Streaming..." : "Chat"}
-            </button> */}
           </div>
-        </div>
-
-        {/* Normal Chat Area
-        <div className="min-h-[200px] max-h-[300px] overflow-y-auto border-2 border-purple-200 rounded-2xl p-6 bg-purple-50 shadow-inner">
-          {loadingNormal ? (
-            <p className="text-purple-500 italic animate-pulse">
-              🤔 Thinking...
-            </p>
-          ) : response ? (
-            <p className="text-purple-800 font-medium">{response}</p>
-          ) : (
-            <p className="text-purple-400 italic">No response yet...</p>
-          )}
-        </div> */}
-
-        {/* Stream Chat Area */}
-        <div className="min-h-[200px] max-h-[300px] overflow-y-auto border-2 border-pink-200 rounded-2xl p-6 bg-pink-50 shadow-inner">
-          {loadingStream ? (
-            <p className="text-pink-500 italic animate-pulse">
-              🔄 Sending...
-            </p>
-          ) : streamResponse ? (
-            <p className="text-pink-800 font-medium">{streamResponse}</p>
-          ) : (
-            <p className="text-pink-400 italic">No response yet...</p>
-          )}
-        </div>
-      </div>
+        </footer>
+      </main>
     </div>
   );
 }
